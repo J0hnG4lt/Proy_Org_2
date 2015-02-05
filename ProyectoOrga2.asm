@@ -11,6 +11,8 @@ introducir_nombre2: .asciiz "Nombre del jugador 2: "
 introducir_nombre3: .asciiz "Nombre del jugador 3: " 
 introducir_nombre4: .asciiz "Nombre del jugador 4: " 
 
+izquierda_derecha: .asciiz "Introduzca 1 si va a jugar a la izquierda. De lo contrario, 2\n"
+
 elegir_ficha: .asciiz "Elija una ficha\n"
 
 nueva_linea: .	    .asciiz "\n"
@@ -41,6 +43,7 @@ main:
 ###################################################################################################
 ###################################################################################################
 				#Programa Principal
+
 
 	#Se introduce el primer jugador
 	la $a0, introducir_nombre1
@@ -98,6 +101,31 @@ main:
 	
 	#Se desordenan las fichas
 	jal shuffle
+	
+	
+	# Ahora creo las manos
+	
+	la $a0, fichas 
+	jal crear_mano
+	sw $v0, mano1
+	
+	la $a0, fichas
+	addi $a0, $a0, 28
+	jal crear_mano
+	sw $v0, mano2
+	
+	la $a0, fichas
+	addi $a0, $a0, 56
+	jal crear_mano
+	sw $v0, mano3
+	
+	la $a0, fichas
+	addi $a0, $a0, 84
+	jal crear_mano
+	sw $v0, mano4
+	
+	# He terminado de crear las manos
+	
 	
 	#Ahora se asignan las fichas a cada jugador
 	
@@ -189,11 +217,148 @@ cochina_encontrada:
 	#En este momento, $s0 tiene la direccion de la mano que comienza
 	# $s1 tiene el numero de la mano
 	
+	#Hay que poner la cochina automaticamente
+	#Hay que crear el tablero
+	
+	jal crear_tablero # Tambien pone la cochina
+	
+	sw $v0, tablero
+	
+	# Ahora hay que quitar de la mano actual a la cochina
+	# Luego le toca al siguiente jugador en el bucle
+	
 	
 bucle_principal:
 	
 	jal imprimir_asignar_turno #imprime a quien le toca
 	
+	move $a0, $s0     #Imprimo la mano del jugador actual
+	jal imprimir_mano
+	
+	li $v0, 4
+	la $a0, nueva_linea
+	syscall
+
+bucle_principal_elegir_ficha:
+			
+	li $v0, 4
+	la $a0, elegir_ficha
+	syscall
+	
+	li $v0, 4
+	la $a0, nueva_linea
+	syscall
+	
+	#Leo los numeros de la ficha seleccionada
+	li $v0, 8
+	syscall
+	
+	move $a1, $v0 #Primer numero
+	
+	li $v0, 8
+	syscall
+	
+	move $a2, $v0 #Segundo numero
+	
+	move $a0, $s0 #Direccion de la mano actual
+	
+	addi $sp, $sp, -12
+	sw $a0, 12($sp) #Conservo estos registros
+	sw $a1, 8($sp)
+	sw $a2, 4($sp)
+	
+	jal verificar_esta_en_mano
+	
+	lw $a2, 4($sp) #Recupero los registros
+	lw $a1, 8($sp)
+	lw $a0, 12($sp)
+	addi $sp, $sp, 12
+	
+	addi $sp, $sp, -4 #Conservo el registro
+	sw $a0, 4($sp)
+	
+	bnq $v0, 1, bucle_principal_elegir_ficha #No esta en la mano, intentar nuevamente
+	
+
+bucle_principal_elegir_lado:
+			
+	la $a0, izquierda_derecha #Pregunto si juega a la izquierda o derecha
+	li $v0, 4
+	syscall
+	
+	lw $a0, 4($sp) #Recupero el registro
+	addi $sp, $sp, 4
+	
+	li $v0, 8 #Respuesta del jugador actual
+	syscall
+	
+	move $a3, $v0
+	
+	lw $a0, tablero
+	
+	addi $sp, $sp, -16 # Guardo los numeros de la ficha
+	sw $a1, 8($sp)
+	sw $a2, 4($sp)
+	sw $a0, 12($sp)
+	sw $a3, 16($sp)
+	
+	jal verificar_movimiento
+	
+	lw $a1, 8($sp) # recupero los numeros de la ficha
+	lw $a2, 4($sp)
+	lw $a0, 12($sp)
+	lw $a3, 16($sp)
+	addi $sp, $sp, 16
+	
+	beq $v0, 0, bucle_principal_elegir_lado #Si no se puede poner la ficha
+	
+	#Ahora hay que añadir la ficha al tablero
+	
+	beq $a3, 2, bucle_principal_anadir_ficha_der # Si la pongo a la derecha
+	
+bucle_principal_anadir_ficha_izq:
+
+	addi $sp, $sp, -16 # Guardo los numeros de la ficha
+	sw $a1, 8($sp)
+	sw $a2, 4($sp)
+	sw $a0, 12($sp)
+	sw $a3, 16($sp)
+	
+	jal anadir_ficha_izq
+	
+	lw $a1, 8($sp) # recupero los numeros de la ficha
+	lw $a2, 4($sp)
+	lw $a0, 12($sp)
+	lw $a3, 16($sp)
+	addi $sp, $sp, 16
+	
+	j bucle_principal_continuar
+	
+bucle_principal_anadir_ficha_der
+		
+	addi $sp, $sp, -16 # Guardo los numeros de la ficha
+	sw $a1, 8($sp)
+	sw $a2, 4($sp)
+	sw $a0, 12($sp)
+	sw $a3, 16($sp)
+	
+	jal anadir_ficha_der
+	
+	lw $a1, 8($sp) # recupero los numeros de la ficha
+	lw $a2, 4($sp)
+	lw $a0, 12($sp)
+	lw $a3, 16($sp)
+	addi $sp, $sp, 16
+	
+bucle_principal_continuar:
+	
+	# Ya he anadido la ficha al tablero
+	
+	# Ahora retiro la ficha de la mano
+	
+	move $a0, $s0 # Direccion de la mano
+	
+	jal quitar_ficha
 	
 	
 	# Condiciones de bucle
@@ -226,12 +391,26 @@ bucle_principal_primer_jugador:
 # $v0 : direccion del tablero
 crear_tablero:
 	
-	li $v0, 9
+	li $v0, 9 #Cabeza de la lista
 	li $a0, 8
 	syscall
 	
-	sw $zero, 0($v0)
-	sw $zero, 4($v0)
+	move $t0, $v0 #Respaldo la direccion de la cabeza
+	
+	
+	li $v0, 9 # Nodo de la cochina
+	li $a0, 12
+	syscall
+	
+	sw $v0, 0($t0)
+	sw $v0, 4($t0)
+	
+	li $t1, 6 #Guardo valores de la cochina
+	sw $t1, ($v0)
+	sw $t1, 4($v0)
+	sw $zero, 8($v0)
+	
+	move $v0, $t0
 	
 	jr $ra
 
@@ -317,11 +496,11 @@ anadir_ficha_der:
 # $a0 : direccion de la cabeza de la lista que representa al tablero
 # $a1 : valor de la izquierda de la ficha que se va a agregar
 # $a2 : valor de la derecha de la ficha que se va a agregar
-# $a3 : 1 si es a la izquierda y 0 si es a la derecha
+# $a3 : 1 si es a la izquierda y 2 si es a la derecha
 # $v0 : 1 si coinciden. De lo contrario, 0
 verificar_movimiento:
 	
-	beq $a3, 0, verificar_movimiento_der #Si se compara la ficha de la dereha o izquierda
+	beq $a3, 2, verificar_movimiento_der #Si se compara la ficha de la dereha o izquierda
 	
 	lw $t0, ($a0) #Direccion de ultima ficha izquierda del tablero
 	
