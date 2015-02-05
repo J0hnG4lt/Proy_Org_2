@@ -11,12 +11,17 @@ introducir_nombre2: .asciiz "Nombre del jugador 2: "
 introducir_nombre3: .asciiz "Nombre del jugador 3: " 
 introducir_nombre4: .asciiz "Nombre del jugador 4: " 
 
+elegir_ficha: .asciiz "Elija una ficha\n"
+
 nueva_linea: .	    .asciiz "\n"
 
 nombre1: .space 50
 nombre2: .space 50
 nombre3: .space 50
 nombre4: .space 50
+
+puntuacion_team1: .word 0 #Puntuacion de los equipos
+puntuacion_team2: .word 0
 
 mano_1: 	 .word 0 #Direccion de la lista de mano
 mano_2: 	 .word 0
@@ -144,6 +149,7 @@ main:
 	jal verificar_esta_en_mano #Si la mano1 tiene la cochina
 	
 	lw $s0, mano1 #Guarda la mano 
+	li $s1, 1
 	beq $v0, 1, cochina_encontrada
 	
 	
@@ -153,6 +159,7 @@ main:
 	jal verificar_esta_en_mano #Si la mano1 tiene la cochina
 	
 	lw $s0, mano2 #Guarda la mano 
+	li $s2, 2
 	beq $v0, 1, cochina_encontrada
 	
 	
@@ -162,6 +169,7 @@ main:
 	jal verificar_esta_en_mano #Si la mano1 tiene la cochina
 	
 	lw $s0, mano3 #Guarda la mano 
+	li $s1, 3
 	beq $v0, 1, cochina_encontrada
 	
 	
@@ -172,14 +180,43 @@ main:
 	jal verificar_esta_en_mano #Si la mano1 tiene la cochina
 	
 	lw $s0, mano4 #Guarda la mano 
+	li $s1, 4
 
 	#Fin de encontrar cochina
 		
 cochina_encontrada:
 	
 	#En este momento, $s0 tiene la direccion de la mano que comienza
+	# $s1 tiene el numero de la mano
 	
-
+	
+bucle_principal:
+	
+	jal imprimir_asignar_turno #imprime a quien le toca
+	
+	
+	
+	# Condiciones de bucle
+	# Determino si le toca al jugador 1
+	
+	# Falta determinar la condicion de parada
+	
+	addi $s1, $s1, 1 #Siguiente jugador
+	
+	bgt $s1, 4, bucle_principal_primer_jugador
+	
+	move $a0, $s1 # Encuentro la direccion de la mano del jugador actual
+	jal asignar_turno
+	move $s0, $v0 # Almaceno dicha direccion
+	
+	j bucle_principal
+	
+bucle_principal_primer_jugador:
+	
+	li $s1, 1
+	
+	j bucle_principal
+	
 
 ###################################################################################################
 ###################################################################################################
@@ -581,5 +618,100 @@ shuffle_loop_inner:
 ###################################################################################################
 ###################################################################################################
 
+# $a0 : numero del jugador
+# $v0 : direccion de la mano del jugador correspondiente
+asignar_turno:
 
+	beq $a0, 1, asignar_turno_uno
 	
+	beq $a0, 2, asignar_turno_dos
+	
+	beg $a0, 3, asignar_turno_tres
+	
+	lw $v0, mano4
+	
+	j asignar_turno_fin
+	
+asignar_turno_uno:
+
+	lw $v0, mano1
+	
+	j asignar_turno_fin
+	
+asignar_turno_dos:
+
+	lw $v0, mano2
+	
+	j asignar_turno_fin
+	
+asignar_turno_tres:
+
+	lw $v0, mano3
+	
+		
+asignar_turno_fin:
+
+	jr $ra
+	
+
+###################################################################################################
+###################################################################################################
+
+# $a0 : numero del jugador actual
+imprimir_asignar_turno:
+
+	beq $a0, 1, imprimir_asignar_turno_uno
+	
+	beq $a0, 2, imprimir_asignar_turno_dos
+	
+	beg $a0, 3, imprimir_asignar_turno_tres
+	
+	li $v0, 4
+	la $a0, jugador_actual
+	syscall
+	
+	li $v0, 4
+	la $a0, nombre4
+	syscall
+	
+	j imprimir_asignar_turno_fin
+	
+imprimir_asignar_turno_uno:
+
+	li $v0, 4
+	la $a0, jugador_actual
+	syscall
+	
+	li $v0, 4
+	la $a0, nombre1
+	syscall
+	
+	j imprimir_asignar_turno_fin
+	
+imprimir_asignar_turno_dos:
+
+	li $v0, 4
+	la $a0, jugador_actual
+	syscall
+	
+	li $v0, 4
+	la $a0, nombre2
+	syscall
+	
+	j imprimir_asignar_turno_fin
+	
+imprimir_asignar_turno_tres:
+
+	li $v0, 4
+	la $a0, jugador_actual
+	syscall
+	
+	li $v0, 4
+	la $a0, nombre3
+	syscall
+	
+		
+imprimir_asignar_turno_fin:
+
+	jr $ra
+
