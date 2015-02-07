@@ -1,5 +1,7 @@
 	.data
-	
+
+fichas: .word 0,0, 0,1, 0,2, 0,3, 0,4, 0,5, 0,6, 1,1, 1,2, 1,3, 1,4, 1,5, 1,6, 2,2, 2,3, 2,4, 2,5, 2,6, 3,3, 3,4, 3,5, 3,6, 4,4, 4,5, 4,6, 5,5, 5,6, 6,6
+			
 parentesis_izq : .asciiz "("
 parentesis_der : .asciiz ")"
 espacio : 	 .asciiz " "
@@ -15,7 +17,9 @@ izquierda_derecha: .asciiz "Introduzca 1 si va a jugar a la izquierda. De lo con
 
 elegir_ficha: .asciiz "Elija una ficha\n"
 
-nueva_linea: .	    .asciiz "\n"
+nueva_linea: 	    .asciiz "\n"
+
+va_a_jugar: .asciiz "Escriba 1 si va a jugar. De lo contrario, 2"
 
 nombre1: .space 50
 nombre2: .space 50
@@ -33,7 +37,7 @@ mano_4: 	 .word 0
 tablero:	 .word 0 #Direccion de la cabeza de la lista del tablero
 
 #fichas: .word 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28
-fichas: .word 0,0, 0,1, 0,2, 0,3, 0,4, 0,5, 0,6, 1,1, 1,2, 1,3, 1,4, 1,5, 1,6, 2,2, 2,3, 2,4, 2,5, 2,6, 3,3, 3,4, 3,5, 3,6, 4,4, 4,5, 4,6, 5,5, 5,6, 6,6
+
 
 
 	.text
@@ -47,6 +51,7 @@ main:
 
 	#Se introduce el primer jugador
 	la $a0, introducir_nombre1
+	li $a1, 40
 	li $v0, 4
 	syscall
 	
@@ -60,6 +65,7 @@ main:
 	
 	#Se introduce el segundo jugador
 	la $a0, introducir_nombre2
+	li $a1, 40
 	li $v0, 4
 	syscall
 	
@@ -73,6 +79,7 @@ main:
 	
 	#Se introduce el tercer jugador
 	la $a0, introducir_nombre3
+	li $a1, 40
 	li $v0, 4
 	syscall
 	
@@ -86,6 +93,7 @@ main:
 	
 	#Se introduce el cuarto jugador
 	la $a0, introducir_nombre4
+	li $a1, 40
 	li $v0, 4
 	syscall
 	
@@ -107,107 +115,71 @@ main:
 	
 	la $a0, fichas 
 	jal crear_mano
-	sw $v0, mano1
+	sw $v0, mano_1
 	
 	la $a0, fichas
 	addi $a0, $a0, 28
 	jal crear_mano
-	sw $v0, mano2
+	sw $v0, mano_2
 	
 	la $a0, fichas
 	addi $a0, $a0, 56
 	jal crear_mano
-	sw $v0, mano3
+	sw $v0, mano_3
 	
 	la $a0, fichas
 	addi $a0, $a0, 84
 	jal crear_mano
-	sw $v0, mano4
+	sw $v0, mano_4
 	
 	# He terminado de crear las manos
-	
-	
-	#Ahora se asignan las fichas a cada jugador
-	
-	la $t0, fichas
-	
-	#Jugador1
-	move $a0, $t0
-	jal crear_mano
-	
-	sw $v0, mano1 #Guardo la direccion de la mano1
-	
-	addi $t0, $t0, 14 #Siguiente grupo de fichas
-	
-	
-	#Jugador2
-	move $a0, $t0
-	jal crear_mano
-	
-	sw $v0, mano2 #Guardo la direccion de la mano2
-	
-	addi $t0, $t0, 14 #Siguiente grupo de fichas
-	
-	
-	#Jugador3
-	move $a0, $t0
-	jal crear_mano
-	
-	sw $v0, mano3 #Guardo la direccion de la mano3
-	
-	addi $t0, $t0, 14 #Siguiente grupo de fichas
-	
-	
-	#Jugador4
-	move $a0, $t0
-	jal crear_mano
-	
-	sw $v0, mano4 #Guardo la direccion de la mano4
-	
-	addi $t0, $t0, 14 #Siguiente grupo de fichas
-	
 	#Fin de asignacion de manos
+	
 	
 	
 	#Determino cual mano tiene a la cochina
 	
-	lw $a0, mano1
+	lw $a0, mano_1
 	li $a1, 6
 	li $a2, 6
 	jal verificar_esta_en_mano #Si la mano1 tiene la cochina
 	
-	lw $s0, mano1 #Guarda la mano 
+	lw $s0, mano_1 #Guarda la mano 
 	li $s1, 1
+	lw $s2, mano_2 #Siguiente mano
 	beq $v0, 1, cochina_encontrada
 	
 	
-	lw $a0, mano2
+	lw $a0, mano_2
 	li $a1, 6
 	li $a2, 6
 	jal verificar_esta_en_mano #Si la mano1 tiene la cochina
 	
-	lw $s0, mano2 #Guarda la mano 
+	lw $s0, mano_2 #Guarda la mano 
+	lw $s2, mano_3 #Siguiente mano
 	li $s2, 2
 	beq $v0, 1, cochina_encontrada
 	
 	
-	lw $a0, mano3
+	lw $a0, mano_3
 	li $a1, 6
 	li $a2, 6
 	jal verificar_esta_en_mano #Si la mano1 tiene la cochina
 	
-	lw $s0, mano3 #Guarda la mano 
+	lw $s0, mano_3 #Guarda la mano 
+	lw $s2, mano_4 #Siguiente nabi
 	li $s1, 3
 	beq $v0, 1, cochina_encontrada
 	
 	
 	
-	lw $a0, mano4
+	lw $a0, mano_4
 	li $a1, 6
 	li $a2, 6
 	jal verificar_esta_en_mano #Si la mano1 tiene la cochina
 	
-	lw $s0, mano4 #Guarda la mano 
+	lw $s0, mano_4 #Guarda la mano 
+	lw $s2, mano_1 #Siguiente mano
 	li $s1, 4
 
 	#Fin de encontrar cochina
@@ -216,7 +188,7 @@ cochina_encontrada:
 	
 	#En este momento, $s0 tiene la direccion de la mano que comienza
 	# $s1 tiene el numero de la mano
-	
+	# $s2 tiene la direccion de la siguiente mano
 	#Hay que poner la cochina automaticamente
 	#Hay que crear el tablero
 	
@@ -227,17 +199,50 @@ cochina_encontrada:
 	# Ahora hay que quitar de la mano actual a la cochina
 	# Luego le toca al siguiente jugador en el bucle
 	
+	move $a0, $s0
+	li $a1, 6
+	li $a2, 6
+	
+	jal quitar_ficha #Se ha quitado la ficha de la mano
+	
+	
+	#Ahora continua el siguiente jugador
+	
+	move $s0, $s2
+	
 	
 bucle_principal:
+
+	jal imprimir_tablero
 	
 	jal imprimir_asignar_turno #imprime a quien le toca
 	
+		
 	move $a0, $s0     #Imprimo la mano del jugador actual
-	jal imprimir_mano
+	jal imprimir_mano # FALLA AQUI. NO TIENE LA MANO COMPLETA AL INICIO
 	
 	li $v0, 4
 	la $a0, nueva_linea
 	syscall
+	
+	# Le pregunto si va a jugar
+	
+	la $a0, va_a_jugar
+	li $v0, 4
+	syscall
+	
+	li $v0, 4
+	la $a0, nueva_linea
+	syscall
+	
+	li $v0, 5
+	syscall
+	
+	# FALLA SI SE RESPONDE 2
+	beq $v0, 2, bucle_principal_siguiente_jugador # Si no va a jugar
+	
+	# Fin preguntar si pasa
+	
 
 bucle_principal_elegir_ficha:
 			
@@ -250,12 +255,12 @@ bucle_principal_elegir_ficha:
 	syscall
 	
 	#Leo los numeros de la ficha seleccionada
-	li $v0, 8
+	li $v0, 5
 	syscall
 	
 	move $a1, $v0 #Primer numero
 	
-	li $v0, 8
+	li $v0, 5
 	syscall
 	
 	move $a2, $v0 #Segundo numero
@@ -277,7 +282,7 @@ bucle_principal_elegir_ficha:
 	addi $sp, $sp, -4 #Conservo el registro
 	sw $a0, 4($sp)
 	
-	bnq $v0, 1, bucle_principal_elegir_ficha #No esta en la mano, intentar nuevamente
+	bne $v0, 1, bucle_principal_elegir_ficha #No esta en la mano, intentar nuevamente
 	
 
 bucle_principal_elegir_lado:
@@ -334,7 +339,7 @@ bucle_principal_anadir_ficha_izq:
 	
 	j bucle_principal_continuar
 	
-bucle_principal_anadir_ficha_der
+bucle_principal_anadir_ficha_der:
 		
 	addi $sp, $sp, -16 # Guardo los numeros de la ficha
 	sw $a1, 8($sp)
@@ -365,6 +370,8 @@ bucle_principal_continuar:
 	# Determino si le toca al jugador 1
 	
 	# Falta determinar la condicion de parada
+	
+bucle_principal_siguiente_jugador:
 	
 	addi $s1, $s1, 1 #Siguiente jugador
 	
@@ -422,7 +429,7 @@ crear_tablero:
 # $a2 : valor de la derecha de la ficha que se va a agregar	
 anadir_ficha_izq:
 
-	sw $fp, $sp	#Prologo
+	sw $fp, ($sp)	#Prologo
 	move $fp, $sp
 	addi $sp, $sp, -4
 
@@ -459,7 +466,7 @@ anadir_ficha_izq:
 # $a2 : valor de la derecha de la ficha que se va a agregar
 anadir_ficha_der:
 
-	sw $fp, $sp	#Prologo
+	sw $fp, ($sp)	#Prologo
 	move $fp, $sp
 	addi $sp, $sp, -4
 
@@ -539,13 +546,14 @@ crear_mano:
 	move $t4, $a0
 	
 	li $v0, 9
-	li $a0, 4 #Reservo espacio para una ficha de la mano
+	li $a0, 16 #Reservo espacio para una ficha de la mano
 	syscall
 	
 	move $t2, $v0 
 	move $t3, $v0 #Siempre guarda la cabeza de la lista de la mano
 		
-	move $t0, 7 #Numero de elementos del arreglo que faltan por ver
+	li $t0, 7 #Numero de elementos del arreglo que faltan por ver
+	
 	
 crear_mano_loop:
 	
@@ -565,16 +573,17 @@ crear_mano_loop:
 	
 	addi $t0, $t0, -1
 	
-	be $t0, 0, crear_mano_fin 
+	ble $t0, 0, crear_mano_fin 
 	
 	li $v0, 9 #Reservo espacio para la siguiente ficha de la mano
-	li $a0, 4
+	li $a0, 16
 	syscall
 	
 	sw $v0, 12($t2) #Guardo la direccion del siguiente
 	sw $t2, 8($v0) #Guardo la direccion del anterior
 	
 	move $t2, $v0 #Siguiente ficha
+	addi $t4, $t4, 8
 	
 	j crear_mano_loop
 
@@ -763,6 +772,7 @@ shuffle_loop:
 	move $a1, $t0 #Cota superior para el numero aleatorio
 	li $v0, 42
 	syscall
+	move $v0, $a0
 	
 	la $t1, fichas
 	
@@ -771,7 +781,7 @@ shuffle_loop_inner:
 	addi $t1, $t1, 8  #Siguiente Ficha 
 	addi $v0, $v0, -1 #Numero de alementos que queda por recorrer hasta encontrar al importante
 	
-	bne $v0, 0, shuffle_loop_inner
+	bgt $v0, 0, shuffle_loop_inner
 	
 	
 	lw $t4, ($t2) #Los elementos izquierdos que voy a intercambiar
@@ -789,7 +799,7 @@ shuffle_loop_inner:
 	addi $t0, $t0, -1 #Considero el siguiente elemento
 	addi $t2, $t2, 8
 	
-	bne $t0 , 0, shuffle_loop
+	bgt $t0 , 0, shuffle_loop
 	
 	jr $ra
 	
@@ -805,27 +815,27 @@ asignar_turno:
 	
 	beq $a0, 2, asignar_turno_dos
 	
-	beg $a0, 3, asignar_turno_tres
+	beq $a0, 3, asignar_turno_tres
 	
-	lw $v0, mano4
+	lw $v0, mano_4
 	
 	j asignar_turno_fin
 	
 asignar_turno_uno:
 
-	lw $v0, mano1
+	lw $v0, mano_1
 	
 	j asignar_turno_fin
 	
 asignar_turno_dos:
 
-	lw $v0, mano2
+	lw $v0, mano_2
 	
 	j asignar_turno_fin
 	
 asignar_turno_tres:
 
-	lw $v0, mano3
+	lw $v0, mano_3
 	
 		
 asignar_turno_fin:
@@ -843,7 +853,7 @@ imprimir_asignar_turno:
 	
 	beq $a0, 2, imprimir_asignar_turno_dos
 	
-	beg $a0, 3, imprimir_asignar_turno_tres
+	beq $a0, 3, imprimir_asignar_turno_tres
 	
 	li $v0, 4
 	la $a0, jugador_actual
@@ -894,3 +904,46 @@ imprimir_asignar_turno_fin:
 
 	jr $ra
 
+
+###################################################################################################
+###################################################################################################
+
+# $a0 : direccion del tablero
+imprimir_tablero:
+	
+	move $t0, $a0
+	lw $t1, ($t0) #Ultimo elemento de la izquierda
+	
+imprimir_tablero_bucle:
+	
+	li $v0, 4
+	la $a0, parentesis_izq
+	syscall
+	
+	li $v0, 1
+	lw $a0, ($t1)
+	syscall
+	
+	li $v0, 4
+	la $a0, coma
+	syscall
+	
+	li $v0, 1
+	lw $a0, 4($t1)
+	syscall
+	
+	li $v0, 4
+	la $a0, parentesis_der
+	syscall
+	
+	li $v0, 4
+	la $a0, espacio
+	syscall
+	
+	lw $t1, 8($t1) #Siguiente elemento de la lista
+	
+	bne $t1, 0, imprimir_tablero_bucle
+	
+	jr $ra
+	
+	
