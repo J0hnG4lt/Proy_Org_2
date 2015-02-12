@@ -208,9 +208,32 @@ cochina_encontrada:
 	
 	#Ahora continua el siguiente jugador
 	
-	move $s0, $s2
+	move $s0, $s2 #Siguiente jugador
+	
+	addi $s1, $s1, 1
+	
+	bgt $s1, 4, volver_primero
+	
+	j bucle_principal
+	
+volver_primero:
+
+	li $s1, 1 # Primer jugador
 	
 	
+	
+	# $s0 : direccion de la mano que juega
+	# $s1 : numero del jugador que juega
+	# $s3 : 1 si se ha puesto una pieza, de lo contrario, cero
+	# $s4 : numero de veces que no se juega en una ronda de 4 turnos
+	# $s6 : puntos del equipo 1
+	# $s7 : puntos del equipo 2
+	# El bucle se detiene si  se tranca el juego o si un equipo suma mas de 100 puntos
+
+	li $s6, 0 #Inicializo
+	li $s7, 0
+	li $s4, 0
+
 bucle_principal:
 
 	lw $a0, tablero
@@ -240,7 +263,10 @@ bucle_principal:
 	li $v0, 5
 	syscall
 	
-	# FALLA SI SE RESPONDE 2
+	# Si el jugador elige no jugar
+	li $t0, 0
+	seq $t0, $v0, 2
+	add $s4, $s4, $t0 # Se suma al numero de veces que no se juega en un turno
 	beq $v0, 2, bucle_principal_siguiente_jugador # Si no va a jugar
 	
 	# Fin preguntar si pasa
@@ -317,7 +343,9 @@ bucle_principal_elegir_lado:
 	lw $a3, 16($sp)
 	addi $sp, $sp, 16
 	
-	beq $v0, 0, bucle_principal_elegir_lado #Si no se puede poner la ficha
+	beq $v0, 0, bucle_principal #Si no se puede poner la ficha
+	
+	move $s3, $v0 # Recuerda que se ha anadido una ficha
 	
 	#Ahora hay que añadir la ficha al tablero
 	
@@ -374,6 +402,38 @@ bucle_principal_continuar:
 	# Falta determinar la condicion de parada
 	
 bucle_principal_siguiente_jugador:
+
+	#Antes de buscar al otro jugador, se suman los puntos si es menester
+
+	beq $s3, 0, bucle_principal_sin_puntos #No se hizo un movimiento valedero
+	
+	beq $s1, 1, bucle_principal_con_puntos_1 #Primer equipo
+	beq $s1, 3, bucle_principal_con_puntos_1
+	
+	beq $s1, 2, bucle_principal_con_puntos_2 #Segundo equipo
+	beq $s1, 4, bucle_principal_con_puntos_2
+	
+bucle_principal_con_puntos_1:
+
+	addi $s6, $s6, 8
+	j bucle_principal_sin_puntos
+	
+bucle_principal_con_puntos_2:	
+
+	addi $s7, $s7, 8
+	j bucle_principal_sin_puntos
+
+bucle_principal_sin_puntos:
+	
+	#Antes de buscar al siguiente jugador, se determina si el bucle ha de parar
+	
+	bge $s6, 100, bucle_principal_fin #Si alguna de las puntuaciones es mayor que 100
+	bge $s7, 100, bucle_principal_fin
+	
+	bge $s4, 4, bucle_principal_fin # Si se tranco el juego
+	
+	
+	#Ahora si se cambia de jugador
 	
 	addi $s1, $s1, 1 #Siguiente jugador
 	
@@ -388,8 +448,16 @@ bucle_principal_siguiente_jugador:
 bucle_principal_primer_jugador:
 	
 	li $s1, 1
+	lw $s0, mano_1
+	li $s4, 0 #Se reinicia el contador de veces que no se ha jugado
 	
 	j bucle_principal
+	
+	
+bucle_principal_fin:
+
+	li $v0, 10
+	syscall
 	
 
 ###################################################################################################
@@ -652,18 +720,27 @@ quitar_ficha_loop:
 	lw $t9, 12($a0) #Siguiente ficha
 	bne $t9, 0, quitar_ficha_quedan_mas
 	
+	lw $t6, 8($a0) #Ficha anterior
+	lw $t7, 12($a0) #ficha siguiente 
+	
+	beq $t4, 1, quitar_ficha_no_siguiente # No hay mas fichas, pero la actual se elimina
+	
 	j quitar_ficha_fin
 	
 quitar_ficha_quedan_mas:
 	
-	addi, $a0, $a0, 4 #Siguiente ficha de la mano
+	#addi, $a0, $a0, 4 #Siguiente ficha de la mano
+	move $t8, $a0
+	move $a0, $t9
 	
 	bne $t4, 1, quitar_ficha_loop #Si aun no se ha encontrado, entonces sigo en el bucle
 	
 	#Termine el bucle
 	
-	sw $t6, 8($a0) #Ficha anterior
-	sw $t7, 12($a0) #ficha siguiente 
+	move $a0, $t8
+	
+	lw $t6, 8($a0) #Ficha anterior
+	lw $t7, 12($a0) #ficha siguiente 
 	beq $t6, 0, quitar_ficha_no_anterior #Si la ficha a quitar es la primera
 	beq  $t7, 0, quitar_ficha_no_siguiente #Si la ficha a quitar es la ultima
 	
@@ -801,9 +878,9 @@ shuffle_loop:
 	
 	li $a0, 0 #Seed
 	move $a1, $t0 #Cota superior para el numero aleatorio
-	li $v0, 42
+	li $v0, 42 #Numero aleatorio en el rango dado
 	syscall
-	move $v0, $a0
+	move $v0, $a0 #El resultado esta en $a0, no en $v0. Esta rutina es rara
 	
 	la $t1, fichas
 	
