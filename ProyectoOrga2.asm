@@ -118,17 +118,17 @@ main:
 	sw $v0, mano_1
 	
 	la $a0, fichas
-	addi $a0, $a0, 28
+	addi $a0, $a0, 56
 	jal crear_mano
 	sw $v0, mano_2
 	
 	la $a0, fichas
-	addi $a0, $a0, 56
+	addi $a0, $a0, 112
 	jal crear_mano
 	sw $v0, mano_3
 	
 	la $a0, fichas
-	addi $a0, $a0, 84
+	addi $a0, $a0, 168
 	jal crear_mano
 	sw $v0, mano_4
 	
@@ -213,8 +213,10 @@ cochina_encontrada:
 	
 bucle_principal:
 
+	lw $a0, tablero
 	jal imprimir_tablero
 	
+	move $a0, $s1 #Numero del jugador actual
 	jal imprimir_asignar_turno #imprime a quien le toca
 	
 		
@@ -294,7 +296,7 @@ bucle_principal_elegir_lado:
 	lw $a0, 4($sp) #Recupero el registro
 	addi $sp, $sp, 4
 	
-	li $v0, 8 #Respuesta del jugador actual
+	li $v0, 5 #Respuesta del jugador actual
 	syscall
 	
 	move $a3, $v0
@@ -445,8 +447,20 @@ anadir_ficha_izq:
 	addi $sp, $sp, 4 #Recupero a $a0
 	lw $a0, ($sp)
 	
+	lw $t1, ($t0) #Valor izquierdo de la ultima ficha izquierda
+	bne $t1, $a2, anadir_ficha_izq_al_reves
+	
 	sw $a1, ($v0) #Guardo el valor de la izquierda de la ficha
 	sw $a2, 4($v0) #Guardo el valor de la derecha de la ficha
+	j anadir_ficha_izq_seguir
+	
+anadir_ficha_izq_al_reves:
+
+	sw $a2, ($v0) #Guardo el valor de la izquierda de la ficha
+	sw $a1, 4($v0) #Guardo el valor de la derecha de la ficha
+
+anadir_ficha_izq_seguir:
+	
 	sw $t0, 8($v0) #Guardo la direccion de la ultima ficha agregada
 	
 	sw $v0, ($a0) #La cabeza de la lista apunta al primer elemento de la izquierda
@@ -482,8 +496,20 @@ anadir_ficha_der:
 	addi $sp, $sp, 4 #Recupero a $a0
 	lw $a0, ($sp)
 	
+	lw $t2, 4($t0) #Valor derecho de la ultima ficha derecha
+	bne $t2, $a1, anadir_ficha_der_al_reves
+	
 	sw $a1, ($v0) #Guardo el valor de la izquierda de la ficha
 	sw $a2, 4($v0) #Guardo el valor de la derecha de la ficha
+	j anadir_ficha_der_seguir
+	
+anadir_ficha_der_al_reves:
+	
+	sw $a2, ($v0) #Guardo el valor de la izquierda de la ficha
+	sw $a1, 4($v0) #Guardo el valor de la derecha de la ficha
+	
+anadir_ficha_der_seguir:
+	
 	sw $zero, 8($v0) #La nueva ficha derecha no apunta a nada
 	
 	sw $v0, 8($t0) #La ultima ficha derecha apunta a la nueva ficha derecha
@@ -514,6 +540,8 @@ verificar_movimiento:
 	lw $t0, ($t0) #Valor izquierdo de la ficha izquierda del tablero
 	
 	seq $t1, $t0, $a1 #Si los numeros de las fichas coinciden
+	seq $t2, $t0, $a2
+	or $t1, $t1, $t2
 	
 	move $v0, $t1
 	
@@ -526,6 +554,8 @@ verificar_movimiento_der:
 	lw $t0, 4($t0) #Valor derecho de la ficha derecha del tablero
 	
 	seq $t1, $t0, $a2 #Si los numeros de las fichas coinciden
+	seq $t2, $t0, $a1
+	or $t1, $t1, $t2
 	
 	move $v0, $t1
 	
@@ -693,7 +723,7 @@ verificar_esta_en_mano_loop:
 	and $t4, $t3, $t2
 	
 	seq $t2, $t0, $a2 #Si la ficha actual coincide con el argumento volteado
-	seq $t3, $t1, $a1
+	seq $t3, $t1, $a1 
 	and $t5, $t3, $t2
 	
 	or $t4, $t4, $t5 #Si la ficha es esta, ya sea voltada o no
@@ -707,7 +737,8 @@ verificar_esta_en_mano_quedan_mas:
 
 	beq $t4, 1, verificar_esta_en_mano_fin #Si la ficha actual es la buscada
 	
-	addi $a0, $a0, 4 #Siguiente de la mano
+	#addi $a0, $a0, 4 #Siguiente de la mano
+	move $a0, $t6
 	j verificar_esta_en_mano_loop
 	
 verificar_esta_en_mano_fin:
@@ -750,8 +781,8 @@ imprimir_mano_loop:
 	
 	beq $t1, 0, imprimir_mano_fin
 	
-	addi $t0, $t0, 4 #Siguiente ficha
-	
+	#addi $t0, $t0, 4 #Siguiente ficha
+	move $t0, $t1
 	j imprimir_mano_loop
 	
 imprimir_mano_fin:
