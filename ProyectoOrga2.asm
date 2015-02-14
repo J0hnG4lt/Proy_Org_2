@@ -39,6 +39,18 @@ tablero:	 .word 0 #Direccion de la cabeza de la lista del tablero
 puntuacion_grupo_1: .asciiz "Puntuacion del grupo 1: "
 puntuacion_grupo_2: .asciiz "Puntuacion del grupo 2: "
 
+chancleta_grupo_1: .asciiz "El equipo 1 gana por chancleta\n"
+chancleta_grupo_2: .asciiz "El equipo 2 gana por chancleta\n"
+
+zapatero_grupo_1: .asciiz "El equipo 1 gana por zapatero\n"
+zapatero_grupo_2: .asciiz "El equipo 2 gana por zapatero\n"
+
+victoria_grupo_1: .asciiz "El equipo 1 gana\n" 
+victoria_grupo_2: .asciiz "El equipo 2 gana\n" 
+
+empate: .asciiz "Empate\n"
+
+nueva_ronda: .asciiz "\nNueva Ronda\n"
 
 
 	.text
@@ -520,10 +532,10 @@ bucle_principal_sin_puntos:
 	
 	#Antes de buscar al siguiente jugador, se determina si el bucle ha de parar
 	
-	bge $s6, 100, bucle_principal_fin #Si alguna de las puntuaciones es mayor que 100
-	bge $s7, 100, bucle_principal_fin
+	bge $s6, 100, bucle_principal_fin_gana_1 #Si alguna de las puntuaciones es mayor que 100
+	bge $s7, 100, bucle_principal_fin_gana_2
 	
-	bge $s4, 4, bucle_principal_fin # Si se tranco el juego
+	bge $s4, 4, bucle_principal_fin_tranca # Si se tranco el juego
 	
 	
 	#Ahora si se cambia de jugador
@@ -547,6 +559,10 @@ bucle_principal_primer_jugador:
 	j bucle_principal
 	
 bucle_principal_reiniciar:
+
+	la $a0, nueva_ronda # Nueva ronda
+	li $v0, 4
+	syscall
 
  	jal shuffle
  
@@ -584,7 +600,92 @@ bucle_principal_reiniciar:
 j bucle_principal
 	
 	
-bucle_principal_fin:
+bucle_principal_fin_tranca:
+
+	bgt $s6, $s7, bucle_principal_fin_tranca_gana_1 # Se decide quien tiene la puntuacion mayor
+	beq $s6, $s7, bucle_principal_fin_tranca_empate
+	
+	beq $s6, 0, bucle_principal_fin_gana_2_zapatero # Ha ganado el equipo 2
+	blt $s6, 10, bucle_principal_fin_gana_2_chancleta
+	j bucle_principal_fin_gana_2_victoria
+
+bucle_principal_fin_tranca_gana_1:
+
+	beq $s7, 0, bucle_principal_fin_gana_1_zapatero # Ha ganado el equipo 1
+	blt $s7, 10, bucle_principal_fin_gana_1_chancleta
+	j bucle_principal_fin_gana_1_victoria
+
+	j bucle_principal_fin_halt
+	
+bucle_principal_fin_gana_1:
+
+	beq $s7, 0, bucle_principal_fin_gana_1_zapatero
+	blt $s7, 10, bucle_principal_fin_gana_1_chancleta
+	j bucle_principal_fin_gana_1_victoria
+
+bucle_principal_fin_gana_1_zapatero:
+
+	la $a0, zapatero_grupo_1
+	li $v0, 4
+	syscall
+	
+	j bucle_principal_fin_halt
+	
+bucle_principal_fin_gana_1_chancleta:
+	
+	la $a0, chancleta_grupo_1
+	li $v0, 4
+	syscall
+	
+	j bucle_principal_fin_halt
+	
+bucle_principal_fin_gana_1_victoria:
+	
+	la $a0, victoria_grupo_1
+	li $v0, 4
+	syscall
+	
+	j bucle_principal_fin_halt
+	
+
+	
+bucle_principal_fin_gana_2:
+
+	beq $s6, 0, bucle_principal_fin_gana_2_zapatero
+	blt $s6, 10, bucle_principal_fin_gana_2_chancleta
+	j bucle_principal_fin_gana_2_victoria
+
+bucle_principal_fin_gana_2_zapatero:
+
+	la $a0, zapatero_grupo_2
+	li $v0, 4
+	syscall
+	
+	j bucle_principal_fin_halt
+	
+bucle_principal_fin_gana_2_chancleta:
+	
+	la $a0, chancleta_grupo_2
+	li $v0, 4
+	syscall
+	
+	j bucle_principal_fin_halt
+	
+bucle_principal_fin_gana_2_victoria:
+	
+	la $a0, victoria_grupo_2
+	li $v0, 4
+	syscall
+	
+	j bucle_principal_fin_halt
+	
+bucle_principal_fin_tranca_empate:
+
+	la $a0, empate
+	li $v0, 4
+	syscall
+	
+bucle_principal_fin_halt:
 
 	li $v0, 10
 	syscall
