@@ -141,7 +141,7 @@ crear_mano:
 	move $t2, $v0 
 	move $t3, $v0 #Siempre guarda la cabeza de la lista de la mano
 		
-	move $t0, 7 #Numero de elementos del arreglo que faltan por ver
+	li $t0, 7 #Numero de elementos del arreglo que faltan por ver
 	
 crear_mano_loop:
 	
