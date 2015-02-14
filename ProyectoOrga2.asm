@@ -36,7 +36,8 @@ mano_4: 	 .word 0
 
 tablero:	 .word 0 #Direccion de la cabeza de la lista del tablero
 
-#fichas: .word 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28
+puntuacion_grupo_1: .asciiz "Puntuacion del grupo 1: "
+puntuacion_grupo_2: .asciiz "Puntuacion del grupo 2: "
 
 
 
@@ -209,6 +210,7 @@ cochina_encontrada:
 	#Ahora continua el siguiente jugador
 	
 	move $s0, $s2 #Siguiente jugador
+	move $s5, $s2 # Recuerda cual fue el siguiente jugador por si hay otra ronda
 	
 	addi $s1, $s1, 1
 	
@@ -226,6 +228,7 @@ volver_primero:
 	# $s1 : numero del jugador que juega
 	# $s3 : 1 si se ha puesto una pieza, de lo contrario, cero
 	# $s4 : numero de veces que no se juega en una ronda de 4 turnos
+	# $s5 : recuerda cual jugador debe jugar primero en la segunda ronda
 	# $s6 : puntos del equipo 1
 	# $s7 : puntos del equipo 2
 	# El bucle se detiene si  se tranca el juego o si un equipo suma mas de 100 puntos
@@ -235,6 +238,7 @@ volver_primero:
 	li $s4, 0
 
 bucle_principal:
+
 
 	lw $a0, tablero
 	jal imprimir_tablero
@@ -249,6 +253,41 @@ bucle_principal:
 	li $v0, 4
 	la $a0, nueva_linea
 	syscall
+	
+	beq $s1, 2, bucle_principal_grupo_2
+	beq $s1, 4, bucle_principal_grupo_2
+	
+bucle_principal_grupo_1:
+
+	la $a0, puntuacion_grupo_1 # Mensaje de puntuacion
+	li $v0, 4
+	syscall
+	
+	move $a0, $s6 # Puntuacion grupo 1
+	li $v0, 1
+	syscall
+	
+	li $v0, 4
+	la $a0, nueva_linea
+	syscall
+
+	j bucle_principal_despues_puntos
+	
+bucle_principal_grupo_2:
+
+	la $a0, puntuacion_grupo_2 # Mensaje de puntuacion
+	li $v0, 4
+	syscall
+	
+	move $a0, $s7 # Puntuacion grupo 2
+	li $v0, 1
+	syscall
+	
+	li $v0, 4
+	la $a0, nueva_linea
+	syscall
+
+bucle_principal_despues_puntos:
 	
 	# Le pregunto si va a jugar
 	
@@ -395,6 +434,35 @@ bucle_principal_continuar:
 	
 	jal quitar_ficha
 	
+	# Hay que guardar los cambios de la mano
+	
+	beq $s1, 2, bucle_principal_quitar_mano_2 # Se encuentra la direccion de la mano actual
+	beq $s1, 3, bucle_principal_quitar_mano_3
+	beq $s1, 4, bucle_principal_quitar_mano_4
+	
+bucle_principal_quitar_mano_1:
+
+	sw $v0, mano_1
+
+ 	j bucle_principal_quitar_mano_fin
+
+bucle_principal_quitar_mano_2:
+
+	sw $v0, mano_2
+
+	j bucle_principal_quitar_mano_fin
+	
+bucle_principal_quitar_mano_3:
+
+	sw $v0, mano_3
+
+	j bucle_principal_quitar_mano_fin
+	
+bucle_principal_quitar_mano_4:
+
+	sw $v0, mano_4
+
+bucle_principal_quitar_mano_fin:
 	
 	# Condiciones de bucle
 	# Determino si le toca al jugador 1
@@ -407,6 +475,21 @@ bucle_principal_siguiente_jugador:
 
 	beq $s3, 0, bucle_principal_sin_puntos #No se hizo un movimiento valedero
 	
+	# Se verifica si se ha vaciado la mano actual
+	
+	lw $t0, ($s0) # Primera ficha de la mano actual
+	lw $t1, 4($s0)
+	lw $t2, 8($s0)
+	lw $t3, 12($s0)
+	add $t0, $t0, $t1 # Se suman para ver si da cero al final
+	add $t0, $t0, $t2 # Si da cero al final, significa que la mano esta vacia
+	add $t0, $t0, $t3 # Entonces el jugador ha terminado
+	
+	bne $t0, 0, bucle_principal_sin_puntos # si no se ha vaciado la mano
+	
+	# Si esta aqui: se ha vaciado la mano actual.
+	# Se procede a sumar puntos y a reiniciar
+	
 	beq $s1, 1, bucle_principal_con_puntos_1 #Primer equipo
 	beq $s1, 3, bucle_principal_con_puntos_1
 	
@@ -415,13 +498,23 @@ bucle_principal_siguiente_jugador:
 	
 bucle_principal_con_puntos_1:
 
-	addi $s6, $s6, 8
-	j bucle_principal_sin_puntos
+	lw $a0, mano_2
+	lw $a1, mano_4
+	jal sumar_puntos
+	
+	add $s6, $s6, $v0
+	
+	j bucle_principal_reiniciar
 	
 bucle_principal_con_puntos_2:	
 
-	addi $s7, $s7, 8
-	j bucle_principal_sin_puntos
+	lw $a0, mano_1
+	lw $a1, mano_3
+	jal sumar_puntos
+
+	add $s7, $s7, $v0
+	
+	j bucle_principal_reiniciar
 
 bucle_principal_sin_puntos:
 	
@@ -452,6 +545,43 @@ bucle_principal_primer_jugador:
 	li $s4, 0 #Se reinicia el contador de veces que no se ha jugado
 	
 	j bucle_principal
+	
+bucle_principal_reiniciar:
+
+ 	jal shuffle
+ 
+ 	jal crear_tablero
+ 	
+ 	sw $v0, tablero
+ 
+	# Ahora creo las manos
+	
+	la $a0, fichas 
+	jal crear_mano
+	sw $v0, mano_1
+	
+	la $a0, fichas
+	addi $a0, $a0, 56
+	jal crear_mano
+	sw $v0, mano_2
+	
+	la $a0, fichas
+	addi $a0, $a0, 112
+	jal crear_mano
+	sw $v0, mano_3
+	
+	la $a0, fichas
+	addi $a0, $a0, 168
+	jal crear_mano
+	sw $v0, mano_4
+	
+	move $s1, $s5 # Numero del siguiente jugador
+	
+	move $a0, $s5 # Se buscara la direccion de la mano de este jugador
+	jal asignar_turno
+	move $s0, $v0 # Direccion de la mano correspondiente al numero del jugador que jugara
+
+j bucle_principal
 	
 	
 bucle_principal_fin:
@@ -737,7 +867,7 @@ quitar_ficha_quedan_mas:
 	
 	#Termine el bucle
 	
-	move $a0, $t8
+	move $a0, $t8 # ficha a eliminar
 	
 	lw $t6, 8($a0) #Ficha anterior
 	lw $t7, 12($a0) #ficha siguiente 
@@ -760,6 +890,8 @@ quitar_ficha_no_anterior:
 	j quitar_ficha_fin
 	
 quitar_ficha_no_siguiente:
+
+	beq $t6, 0, quitar_ficha_no_anterior_siguiente
 
 	sw $zero, 12($t6)  #El nodo actual se deja de apuntar
 	
@@ -1055,3 +1187,68 @@ imprimir_tablero_bucle:
 	jr $ra
 	
 	
+###################################################################################################
+###################################################################################################
+
+
+
+# $a0 : direccion de la mano de un jugador
+# $a1 : direccion de la mano del companero
+sumar_puntos:
+	
+	move $t0, $a0 # $t0 va a ir cambiando en el bucle
+	li $t3, 0  # $t3 se usara para llevar la suma
+	
+	# Se determina si la mano esta vacia
+	
+	li $t5, 0
+	lw $t4, ($a0)
+	add $t5, $t4, $t5
+	
+	lw $t4, 4($a0)
+	add $t5, $t4, $t5
+	
+	beq $t5, 0, sumar_puntos_companero
+	
+sumar_puntos_bucle:
+
+	lw $t1, 0($t0) # Numero de la izquierda de la ficha actual
+	lw $t2, 4($t0) # Numero de la derecha de la ficha actual
+	add $t3, $t3, $t1 # Sumo los numeros de la ficha
+	add $t3, $t3, $t2 # Sumo los numeros de la ficha
+	
+	lw $t0, 12($t0) # Siguiente ficha
+	
+	bne $t0, 0, sumar_puntos_bucle
+
+sumar_puntos_companero:
+			
+	move $t0, $a1
+	
+	# Se determina si la mano esta vacia
+	
+	li $t5, 0
+	lw $t4, ($a1)
+	add $t5, $t4, $t5
+	
+	lw $t4, 4($a1)
+	add $t5, $t4, $t5
+	
+	beq $t5, 0, sumar_puntos_fin
+	
+sumar_puntos_bucle_companero:
+
+	lw $t1, 0($t0) # Numero de la izquierda de la ficha actual
+	lw $t2, 4($t0) # Numero de la derecha de la ficha actual
+	add $t3, $t3, $t1 # Sumo los numeros de la ficha
+	add $t3, $t3, $t2 # Sumo los numeros de la ficha
+	
+	lw $t0, 12($t0) # Siguiente ficha
+	
+	bne $t0, 0, sumar_puntos_bucle_companero
+	
+sumar_puntos_fin:
+
+	move $v0, $t3
+	
+	jr $ra
