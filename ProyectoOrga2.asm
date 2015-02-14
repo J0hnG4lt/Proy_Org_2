@@ -222,9 +222,11 @@ cochina_encontrada:
 	#Ahora continua el siguiente jugador
 	
 	move $s0, $s2 #Siguiente jugador
-	move $s5, $s2 # Recuerda cual fue el siguiente jugador por si hay otra ronda
+	
 	
 	addi $s1, $s1, 1
+	
+	move $s5, $s1 # Recuerda cual fue el siguiente jugador por si hay otra ronda
 	
 	bgt $s1, 4, volver_primero
 	
@@ -240,7 +242,7 @@ volver_primero:
 	# $s1 : numero del jugador que juega
 	# $s3 : 1 si se ha puesto una pieza, de lo contrario, cero
 	# $s4 : numero de veces que no se juega en una ronda de 4 turnos
-	# $s5 : recuerda cual jugador debe jugar primero en la segunda ronda
+	# $s5 : recuerda el numero del jugador de la siguiente ronda
 	# $s6 : puntos del equipo 1
 	# $s7 : puntos del equipo 2
 	# El bucle se detiene si  se tranca el juego o si un equipo suma mas de 100 puntos
@@ -566,10 +568,6 @@ bucle_principal_reiniciar:
 
  	jal shuffle
  
- 	jal crear_tablero
- 	
- 	sw $v0, tablero
- 
 	# Ahora creo las manos
 	
 	la $a0, fichas 
@@ -596,6 +594,29 @@ bucle_principal_reiniciar:
 	move $a0, $s5 # Se buscara la direccion de la mano de este jugador
 	jal asignar_turno
 	move $s0, $v0 # Direccion de la mano correspondiente al numero del jugador que jugara
+	
+	move $a0, $s0 
+	move $a1, $s1
+	jal crear_tablero_nueva_ronda # El primer jugador juega en esa rutina como caso especial
+	sw $v0, tablero
+	
+	addi $s1, $s1, 1
+	move $s5, $s1
+	beq $s1, 5, bucle_principal_reiniciar_primer_jugador
+	
+	move $a0, $s1 # Se actualizan los datos del jugador actual
+	jal asignar_turno
+	move $s0, $v0
+	
+	j bucle_principal_reiniciar_fin
+	
+bucle_principal_reiniciar_primer_jugador:
+
+	li $s1, 1
+	lw $s0, mano_1
+	li $s5, 4
+
+bucle_principal_reiniciar_fin:
 
 j bucle_principal
 	
@@ -1353,3 +1374,159 @@ sumar_puntos_fin:
 	move $v0, $t3
 	
 	jr $ra
+	
+	
+###################################################################################################
+###################################################################################################
+	
+# $a0 : direccion de la mano del primer jugador de la nueva ronda
+# $a1 : numero del jugador inicial de la nueva ronda
+# $v0 : direccion del nuevo tablero
+crear_tablero_nueva_ronda:
+
+	sw $fp, ($sp)
+	move $fp, $sp
+	addi $sp, $sp, -4
+	
+	sw $ra, ($sp)
+	addi $sp, $sp, -4
+
+	move $t2, $a0 # Guardo la info del jugador actual
+	move $t3, $a1
+
+	li $v0, 9 #Cabeza de la lista
+	li $a0, 8
+	syscall
+	
+	move $t0, $v0 #Respaldo la direccion de la cabeza
+	
+	
+	li $v0, 9 # Nodo del jugador actual
+	li $a0, 12
+	syscall
+	
+	sw $v0, 0($t0) # Inicializo los apuntadores de la cabeza
+	sw $v0, 4($t0)
+	
+	move $t1, $v0
+	
+	# El jugador actual ha de elegir una ficha inicial
+	# $t1 contiene la direccion del nodo en el que se guardara la ficha elegida
+	# $t0 contiene la direccion de la cabeza de la lista
+	# $t2 contiene la direccion de la mano del jugador actual
+	# $t3 contiene el numero del jugador actual
+	# $t4 primer numero de la ficha elegida
+	# $t5 segundo numero de la ficha elegida
+	
+	la $a0, jugador_actual
+	li $v0, 4
+	syscall
+	
+	beq $t3, 4, crear_tabla_nueva_ronda_jugador_4
+	beq $t3, 3, crear_tabla_nueva_ronda_jugador_3
+	beq $t3, 2, crear_tabla_nueva_ronda_jugador_2
+	
+	# Le toca al jugador 1
+	
+	la $a0, nombre1
+	li $v0, 4
+	syscall
+	
+	j crear_tabla_nueva_ronda_seguir
+	
+crear_tabla_nueva_ronda_jugador_2:
+
+	la $a0, nombre2
+	li $v0, 4
+	syscall
+	
+	j crear_tabla_nueva_ronda_seguir
+	
+crear_tabla_nueva_ronda_jugador_3:
+
+	la $a0, nombre3
+	li $v0, 4
+	syscall
+	
+	j crear_tabla_nueva_ronda_seguir
+	
+crear_tabla_nueva_ronda_jugador_4:
+
+	la $a0, nombre4
+	li $v0, 4
+	syscall
+	
+	j crear_tabla_nueva_ronda_seguir
+	
+crear_tabla_nueva_ronda_seguir:
+
+	la $a0, nueva_linea
+	li $v0, 4
+	syscall
+	
+	# Ahora se imprime la mano y se elige la ficha
+	
+	move $a0, $t2 # Direccion de la mano actual
+	
+	addi $sp, $sp, -16
+	sw $t0, 4($sp)
+	sw $t1, 8($sp)
+	sw $t2, 12($sp)
+	sw $t3, 16($sp)
+	
+	jal imprimir_mano # Imprimo la mano actual
+	
+	lw $t0, 4($sp)
+	lw $t1, 8($sp)
+	lw $t2, 12($sp)
+	lw $t3, 16($sp)
+	addi $sp, $sp, 16
+	
+	la $a0, elegir_ficha # Mensaje de elegir ficha
+	li $v0, 4
+	syscall
+	
+	li $v0, 5 # Leo el primer numero
+	syscall
+	
+	sw $v0, ($t1) # Guardo el primer numero
+	move $t4, $v0
+	
+	li $v0, 5 # Leo el segundo numero
+	syscall
+	
+	sw $v0 4($t1) # Guardo el segundo numero
+	move $t5, $v0
+	
+	move $a0, $t2
+	move $a1, $t4
+	move $a2, $t5
+	
+	addi $sp, $sp, -16
+	sw $t0, 4($sp)
+	sw $t1, 8($sp)
+	sw $t2, 12($sp)
+	sw $t3, 16($sp)
+	
+	jal quitar_ficha # Quito la ficha elegida
+	
+	lw $t0, 4($sp)
+	lw $t1, 8($sp)
+	lw $t2, 12($sp)
+	lw $t3, 16($sp)
+	addi $sp, $sp, 16
+	
+	la $a0, nueva_linea
+	li $v0, 4
+	syscall
+	
+	move $v0, $t0 # Direccion de la cabeza de la lista de tablero
+	
+	addi $sp, $sp, 4
+	lw $ra, ($sp)
+	addi $sp, $sp, 4
+	lw $fp, ($sp)
+	
+	jr $ra
+	
+	
