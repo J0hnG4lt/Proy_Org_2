@@ -1,7 +1,10 @@
 	.data
 
-fichas: .word 0,0, 0,1, 0,2, 0,3, 0,4, 0,5, 0,6, 1,1, 1,2, 1,3, 1,4, 1,5, 1,6, 2,2, 2,3, 2,4, 2,5, 2,6, 3,3, 3,4, 3,5, 3,6, 4,4, 4,5, 4,6, 5,5, 5,6, 6,6
-			
+#fichas: .word 0,0, 0,1, 0,2, 0,3, 0,4, 0,5, 0,6, 1,1, 1,2, 1,3, 1,4, 1,5, 1,6, 2,2, 2,3, 2,4, 2,5, 2,6, 3,3, 3,4, 3,5, 3,6, 4,4, 4,5, 4,6, 5,5, 5,6, 6,6
+fichas_ascii: .space 200
+fichas: .space 560
+nombre_archivo: .asciiz "/home/georvic/USB/orga/Proyecto2_Orga/input.txt"
+									
 parentesis_izq : .asciiz "("
 parentesis_der : .asciiz ")"
 espacio : 	 .asciiz " "
@@ -61,7 +64,47 @@ main:
 ###################################################################################################
 				#Programa Principal
 
+	li $a1, 0
+	la $a0, nombre_archivo #Se abre el archivo
+	li $v0, 13
+	syscall
+	
+	move $a0, $v0 #Se lee el archivo
+	la $a1, fichas_ascii
+	li $a2, 141
+	li $v0, 14
+	syscall
+	
+	li $v0, 16 # Se cierra el archivo
+	syscall # $a0 ya tiene el file descriptor
+	
+	# Ahora hay que transformar los caracteres ascii a enteros
+	la $t0, fichas_ascii
+	la $t1, fichas
+	
+	
+	li $t3, 28 #Contador
+	
+bucle_transformar_de_ascii:
 
+	lb $t2, 1($t0) # Buffer del archivo
+
+	andi $t2, $t2, 15 # 15 = 0x0F Se transforma el ascii a binario
+	sb $t2, ($t1)  # Se guarda el binario correspondiente
+	
+	lb $t2, 3($t0) # Buffer del archivo
+	
+	andi $t2, $t2, 15 # 15 = 0x0F Se transforma el ascii a binario
+	sb $t2, 4($t1) # Se guarfa el binario correspondiente
+	
+	addi $t1, $t1, 8 # Siguiente ficha xy
+	addi $t0, $t0, 5 # Siguiente (x,y)
+	
+	addi $t3, $t3, -1
+	
+	bge $t3, 0, bucle_transformar_de_ascii 
+	
+	
 	#Se introduce el primer jugador
 	la $a0, introducir_nombre1
 	li $a1, 40
@@ -706,6 +749,22 @@ bucle_principal_fin_tranca_empate:
 	li $v0, 4
 	syscall
 	
+	# Ahora se sumaran los puntos de cada equipo y se le asignan al contrario
+	
+	lw $a0, mano_1
+	lw $a1, mano_3
+	jal sumar_puntos 
+	
+	add $s7, $s7, $v0
+	
+	lw $a0, mano_2
+	lw $a1, mano_4
+	jal sumar_puntos
+	
+	add $s6, $s6, $v0
+	
+	j bucle_principal_reiniciar
+	
 bucle_principal_fin_halt:
 
 	li $v0, 10
@@ -1298,9 +1357,9 @@ imprimir_tablero_bucle:
 	la $a0, parentesis_der
 	syscall
 	
-	li $v0, 4
-	la $a0, espacio
-	syscall
+	#li $v0, 4
+	#la $a0, espacio
+	#syscall
 	
 	lw $t1, 8($t1) #Siguiente elemento de la lista
 	
