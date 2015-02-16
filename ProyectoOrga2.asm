@@ -1,3 +1,6 @@
+	# Integrantes: Georvic Tur    -- Carnet: 12-11402
+	#              Ronald Becerra -- Carnet: 12-10706
+	
 	.data
 
 #fichas: .word 0,0, 0,1, 0,2, 0,3, 0,4, 0,5, 0,6, 1,1, 1,2, 1,3, 1,4, 1,5, 1,6, 2,2, 2,3, 2,4, 2,5, 2,6, 3,3, 3,4, 3,5, 3,6, 4,4, 4,5, 4,6, 5,5, 5,6, 6,6
@@ -296,6 +299,7 @@ volver_primero:
 
 bucle_principal:
 
+	li $s3, 0 # 1 si se ha puesto una ficha en la iteracion
 
 	lw $a0, tablero
 	jal imprimir_tablero
@@ -605,6 +609,8 @@ bucle_principal_primer_jugador:
 	
 bucle_principal_reiniciar:
 
+	li $s4, 0 #Contador de veces en las que no se juega
+
 	la $a0, nueva_ronda # Nueva ronda
 	li $v0, 4
 	syscall
@@ -666,6 +672,16 @@ j bucle_principal
 	
 bucle_principal_fin_tranca:
 
+	sgt $t0, $s6, 100
+	sgt $t1, $s7, 100
+	or $t1, $t1, $t0
+	
+	beq $t1, 0, bucle_principal_fin_tranca_sumar_puntos # Si no hay alguno con mas de 100 puntos
+
+	#Alguno tiene mas de 100 puntos
+	
+bucle_principal_fin_tranca_determinar_ganador:
+	
 	bgt $s6, $s7, bucle_principal_fin_tranca_gana_1 # Se decide quien tiene la puntuacion mayor
 	beq $s6, $s7, bucle_principal_fin_tranca_empate
 	
@@ -750,7 +766,9 @@ bucle_principal_fin_tranca_empate:
 	syscall
 	
 	# Ahora se sumaran los puntos de cada equipo y se le asignan al contrario
-	
+
+bucle_principal_fin_tranca_sumar_puntos:
+			
 	lw $a0, mano_1
 	lw $a1, mano_3
 	jal sumar_puntos 
@@ -762,6 +780,12 @@ bucle_principal_fin_tranca_empate:
 	jal sumar_puntos
 	
 	add $s6, $s6, $v0
+	
+	sgt $t0, $s6, 100
+	sgt $t1, $s7, 100
+	or $t0, $t0, $t1
+	
+	beq $t0, 1, bucle_principal_fin_tranca_determinar_ganador
 	
 	j bucle_principal_reiniciar
 	
